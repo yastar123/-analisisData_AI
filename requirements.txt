@@ -9,7 +9,5 @@ seaborn==0.13.0
 openpyxl==3.1.2
 Pillow>=10.0.0
 python-magic==0.4.27
-python-magic-bin==0.4.14
 beautifulsoup4==4.12.2
 lxml==4.9.3
-python-3.10.12
