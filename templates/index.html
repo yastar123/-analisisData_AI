@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antarmuka Chat AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .model-card {
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .model-card.selected {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+
+        .response-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.5;
+        }
+
+        .response-content code {
+            background-color: #f3f4f6;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .response-content pre {
+            background-color: #1f2937;
+            color: #e5e7eb;
+            padding: 1em;
+            border-radius: 0.5em;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .response-content pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .model-dropdown {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .model-dropdown.show {
+            max-height: 500px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #3B82F6;
+            margin: 0 2px;
+            animation: loading 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes loading {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .file-preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: contain;
+        }
+
+        .typing-animation {
+            display: inline-block;
+            position: relative;
+        }
+
+        .typing-animation::after {
+            content: '▋';
+            position: absolute;
+            right: -4px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .message-container {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.3s ease forwards;
+            position: relative;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: none;
+            gap: 0.5rem;
+        }
+
+        .message-container:hover .message-actions {
+            display: flex;
+        }
+
+        .message-action-btn {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .message-action-btn:hover {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .message-action-btn i {
+            margin-right: 0.25rem;
+        }
+
+        .copy-success {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background-color: #10b981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            display: none;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .visualization-container {
+            margin: 1em 0;
+            padding: 1em;
+            background-color: #f8fafc;
+            border-radius: 0.5em;
+            border: 1px solid #e2e8f0;
+        }
+
+        .visualization-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.25em;
+        }
+
+        .visualization-controls {
+            display: flex;
+            gap: 1em;
+            margin-bottom: 1em;
+            flex-wrap: wrap;
+        }
+
+        .visualization-controls select,
+        .visualization-controls button {
+            padding: 0.5em 1em;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25em;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .visualization-controls button {
+            background-color: #3B82F6;
+            color: white;
+            border: none;
+        }
+
+        .visualization-controls button:hover {
+            background-color: #2563EB;
+        }
+
+        .data-info {
+            margin: 1em 0;
+            padding: 1em;
+            background-color: #f8fafc;
+            border-radius: 0.5em;
+            border: 1px solid #e2e8f0;
+        }
+
+        .data-info h3 {
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+
+        .data-info ul {
+            list-style-type: disc;
+            margin-left: 1.5em;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">Antarmuka Chat AI</h1>
+
+            <!-- Guide Panel -->
+            <div class="mb-8 bg-white rounded-lg shadow-lg p-6">
+                <button id="guide-toggle" class="w-full flex justify-between items-center text-left">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-book mr-2 text-blue-500"></i>Panduan Penggunaan
+                    </h2>
+                    <i class="fas fa-chevron-down transition-transform"></i>
+                </button>
+                <div id="guide-content" class="mt-4 hidden">
+                    <div class="grid grid-cols-1 gap-6">
+                        <!-- Fitur Utama -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-lg text-gray-900">
+                                <i class="fas fa-star text-yellow-500 mr-2"></i>Fitur Utama
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-comments text-blue-500 mr-2 text-xl"></i>
+                                        <span class="font-medium">Chat dengan AI</span>
+                                    </div>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 ml-6">
+                                        <li>Pilih dari berbagai model AI yang tersedia</li>
+                                        <li>Dapatkan respons dalam bahasa Indonesia</li>
+                                        <li>Dukungan untuk kode dan format teks</li>
+                                        <li>Fitur copy untuk menyimpan respons</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-chart-bar text-green-500 mr-2 text-xl"></i>
+                                        <span class="font-medium">Analisis Data</span>
+                                    </div>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 ml-6">
+                                        <li>Unggah file Excel, CSV, atau JSON</li>
+                                        <li>Analisis otomatis pola dan tren</li>
+                                        <li>Visualisasi data interaktif</li>
+                                        <li>Rekomendasi analisis lanjutan</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <div class="flex items-center mb-2">
+                                        <i class="fas fa-code text-purple-500 mr-2 text-xl"></i>
+                                        <span class="font-medium">API Testing</span>
+                                    </div>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 ml-6">
+                                        <li>Analisis dokumentasi API</li>
+                                        <li>Testing endpoint dengan berbagai metode</li>
+                                        <li>Validasi respons dan performa</li>
+                                        <li>Rekomendasi optimasi API</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cara Penggunaan -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-lg text-gray-900">
+                                <i class="fas fa-book text-blue-500 mr-2"></i>Cara Penggunaan
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <div class="flex items-start mb-2">
+                                        <span
+                                            class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2 mt-1">1</span>
+                                        <div>
+                                            <span class="font-medium">Pilih Model AI</span>
+                                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 mt-2 ml-6">
+                                                <li>Klik tombol "Pilih Model AI"</li>
+                                                <li>Pilih model yang sesuai dengan kebutuhan</li>
+                                                <li>Setiap model memiliki keunggulan berbeda</li>
+                                                <li>Model dapat diubah kapan saja</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <div class="flex items-start mb-2">
+                                        <span
+                                            class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2 mt-1">2</span>
+                                        <div>
+                                            <span class="font-medium">Kirim Pesan atau Unggah File</span>
+                                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 mt-2 ml-6">
+                                                <li>Ketik pesan di kotak input</li>
+                                                <li>Unggah file dengan tombol paperclip</li>
+                                                <li>File yang didukung: Excel, CSV, JSON, dll</li>
+                                                <li>Ukuran maksimum file: 10MB</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <div class="flex items-start mb-2">
+                                        <span
+                                            class="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2 mt-1">3</span>
+                                        <div>
+                                            <span class="font-medium">Analisis dan Visualisasi</span>
+                                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 mt-2 ml-6">
+                                                <li>AI akan menganalisis data secara otomatis</li>
+                                                <li>Dapatkan visualisasi yang relevan</li>
+                                                <li>Download visualisasi dalam format PNG</li>
+                                                <li>Copy informasi analisis ke clipboard</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File yang Didukung -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-lg text-gray-900">
+                                <i class="fas fa-file text-green-500 mr-2"></i>File yang Didukung
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">File Data</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-excel text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">Excel (.xlsx, .xls)</span>
+                                                <span class="text-xs text-gray-500">Mendukung multiple sheets</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-csv text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">CSV (.csv)</span>
+                                                <span class="text-xs text-gray-500">Format data tabular</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-code text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">JSON (.json)</span>
+                                                <span class="text-xs text-gray-500">Data terstruktur</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">File Teks</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-alt text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">Text (.txt)</span>
+                                                <span class="text-xs text-gray-500">Teks biasa</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-word text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">Word (.doc, .docx)</span>
+                                                <span class="text-xs text-gray-500">Dokumen teks</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-pdf text-green-500 mr-2"></i>
+                                            <div>
+                                                <span class="block">PDF (.pdf)</span>
+                                                <span class="text-xs text-gray-500">Dokumen PDF</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tips dan Trik -->
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-lg text-gray-900">
+                                <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>Tips dan Trik
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">Optimasi Pertanyaan</h4>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                        <li>Gunakan bahasa yang jelas dan spesifik</li>
+                                        <li>Berikan konteks yang cukup</li>
+                                        <li>Pisahkan pertanyaan kompleks menjadi beberapa bagian</li>
+                                        <li>Gunakan kata kunci yang relevan</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">Analisis Data</h4>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                        <li>Pastikan data bersih dan terstruktur</li>
+                                        <li>Gunakan format file yang sesuai</li>
+                                        <li>Perhatikan ukuran file (max 10MB)</li>
+                                        <li>Backup data sebelum analisis</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">Visualisasi</h4>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                        <li>Pilih tipe visualisasi yang sesuai</li>
+                                        <li>Download visualisasi untuk referensi</li>
+                                        <li>Gunakan fitur zoom untuk detail</li>
+                                        <li>Simpan insight penting</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h4 class="font-medium mb-2">API Testing</h4>
+                                    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                        <li>Validasi URL API sebelum testing</li>
+                                        <li>Periksa dokumentasi API</li>
+                                        <li>Gunakan header yang sesuai</li>
+                                        <li>Monitor performa endpoint</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <!-- Model Selection -->
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <button id="model-selector"
+                            class="flex-1 p-4 bg-gray-50 border border-gray-300 rounded-lg flex justify-between items-center hover:bg-gray-100 transition-colors">
+                            <span class="font-medium">Pilih Model AI</span>
+                            <i class="fas fa-chevron-down transition-transform"></i>
+                        </button>
+                    </div>
+
+                    <div id="model-dropdown" class="model-dropdown mt-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                            {% for model in models %}
+                            <div class="model-card relative p-4 border border-gray-300 rounded-lg cursor-pointer hover:shadow-md"
+                                data-model-key="{{ model.key }}">
+                                <input type="radio" name="model-select" id="model-{{ model.key }}"
+                                    value="{{ model.key }}" class="peer hidden" {% if model.key==default_model
+                                    %}checked{% endif %}>
+                                <label for="model-{{ model.key }}" class="block">
+                                    <div class="font-medium text-gray-900">{{ model.name }}</div>
+                                    <div class="text-sm text-gray-500 mt-1">{{ model.description }}</div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Testing Section -->
+                <div class="mb-4">
+                    <button id="api-selector"
+                        class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg flex justify-between items-center hover:bg-gray-100 transition-colors">
+                        <span class="font-medium">API Testing</span>
+                        <i class="fas fa-chevron-down transition-transform"></i>
+                    </button>
+
+                    <div id="api-dropdown" class="model-dropdown mt-2">
+                        <div class="p-4 bg-gray-50 rounded-lg space-y-4">
+                            <!-- API Documentation Analysis -->
+                            <div class="space-y-2">
+                                <h3 class="font-medium text-gray-900">Analyze API Documentation</h3>
+                                <div class="flex gap-2">
+                                    <input type="text" id="api-doc-url"
+                                        class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                        placeholder="Enter OpenAPI/Swagger documentation URL">
+                                    <button onclick="analyzeApiDoc()"
+                                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                        Analyze
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- API Testing -->
+                            <div class="space-y-2">
+                                <h3 class="font-medium text-gray-900">Test API Endpoint</h3>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <div class="flex gap-2">
+                                        <select id="api-method"
+                                            class="p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                            <option value="GET">GET</option>
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="DELETE">DELETE</option>
+                                        </select>
+                                        <input type="text" id="api-url"
+                                            class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                            placeholder="Enter API endpoint URL">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-sm text-gray-600 mb-1">Headers</label>
+                                            <textarea id="api-headers"
+                                                class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                                rows="3" placeholder='{"Content-Type": "application/json"}'></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-gray-600 mb-1">Request Body</label>
+                                            <textarea id="api-body"
+                                                class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                                                rows="3" placeholder='{"key": "value"}'></textarea>
+                                        </div>
+                                    </div>
+                                    <button onclick="testApiEndpoint()"
+                                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                        Test Endpoint
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div id="chat-messages" class="h-96 overflow-y-auto mb-4 space-y-4 p-4 bg-gray-50 rounded-lg">
+                    <!-- Messages will be added here -->
+                </div>
+
+                <!-- File Upload Preview -->
+                <div id="file-preview" class="mb-4 hidden">
+                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                        <div id="file-preview-content" class="flex items-center gap-2 flex-1">
+                            <i class="fas fa-file text-gray-500"></i>
+                            <span id="file-name" class="text-sm text-gray-700">Nama file</span>
+                        </div>
+                        <button onclick="removeFile()" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input Form -->
+                <form id="chat-form" class="flex flex-col gap-2">
+                    <div class="flex gap-2">
+                        <textarea id="user-input"
+                            class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none"
+                            placeholder="Ketik pesanmu di sini..." rows="3"></textarea>
+                        <div class="flex flex-col gap-2">
+                            <button type="submit"
+                                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                            <label for="file-upload"
+                                class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer text-center">
+                                <i class="fas fa-paperclip"></i>
+                            </label>
+                            <input type="file" id="file-upload" class="hidden"
+                                accept="image/*,video/*,.pdf,.doc,.docx,.txt,.xlsx,.xls,.csv,.json,.xml,.html,.md,.rtf,.odt,.ods,.odp">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Model selection handling
+        const modelSelector = document.getElementById('model-selector');
+        const modelDropdown = document.getElementById('model-dropdown');
+        const modelCards = document.querySelectorAll('.model-card');
+
+        modelSelector.addEventListener('click', () => {
+            modelDropdown.classList.toggle('show');
+            modelSelector.querySelector('i').classList.toggle('rotate-180');
+        });
+
+        modelCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const radio = card.querySelector('input[type="radio"]');
+                radio.checked = true;
+
+                // Update selected state
+                modelCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+
+                // Update selector text
+                const modelName = card.querySelector('.font-medium').textContent;
+                modelSelector.querySelector('span').textContent = modelName;
+
+                // Close dropdown
+                modelDropdown.classList.remove('show');
+                modelSelector.querySelector('i').classList.remove('rotate-180');
+            });
+        });
+
+        // File handling
+        const fileInput = document.getElementById('file-upload');
+        const filePreview = document.getElementById('file-preview');
+        const filePreviewContent = document.getElementById('file-preview-content');
+        const fileName = document.getElementById('file-name');
+        let currentFile = null;
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentFile = file;
+                fileName.textContent = file.name;
+
+                // Clear previous preview
+                filePreviewContent.innerHTML = '';
+
+                // Add appropriate preview based on file type
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.className = 'file-preview-image';
+                    filePreviewContent.prepend(img);
+                } else {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-file text-gray-500';
+                    filePreviewContent.prepend(icon);
+                }
+
+                filePreviewContent.appendChild(fileName);
+                filePreview.classList.remove('hidden');
+
+                // If it's a data file, analyze it
+                if (file.name.match(/\.(xlsx|xls|csv)$/i)) {
+                    analyzeDataFile(file);
+                }
+            }
+        });
+
+        function removeFile() {
+            currentFile = null;
+            fileInput.value = '';
+            filePreview.classList.add('hidden');
+        }
+
+        // Loading animation
+        function addLoadingMessage() {
+            const messagesDiv = document.getElementById('chat-messages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'bg-gray-100 p-3 rounded-lg max-w-[80%] message-container';
+            loadingDiv.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="text-gray-600">AI sedang berpikir...</span>
+                </div>
+            `;
+            loadingDiv.id = 'loading-message';
+            messagesDiv.appendChild(loadingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeLoadingMessage() {
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        // Data analysis and visualization
+        async function analyzeDataFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addDataInfo(data.data_info, data.analysis);
+                }
+            } catch (error) {
+                console.error('Error analyzing data:', error);
+            }
+        }
+
+        function addDataInfo(dataInfo, analysis) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'data-info message-container';
+
+            let html = `
+                <h3>Analisis Data Selesai</h3>
+                <div class="mt-2">
+                    <h4 class="font-medium">Informasi Dasar:</h4>
+                    <ul>
+                        <li>Bentuk Data (Baris x Kolom): ${dataInfo.shape[0]} × ${dataInfo.shape[1]}</li>
+                        <li>Columns: ${dataInfo.columns.join(', ')}</li>
+                    </ul>
+                </div>
+            `;
+
+            if (analysis.patterns && analysis.patterns.length > 0) {
+                html += `
+                    <div class="mt-2">
+                        <h4 class="font-medium">Pola Ditemukan:</h4>
+                        <ul>
+                            ${analysis.patterns.map(pattern => `<li>${pattern}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Handle structured recommendations
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                html += `
+                    <div class="mt-2">
+                        <h4 class="font-medium">Rekomendasi Visualisasi:</h4>
+                        <ul>
+                `;
+
+                analysis.recommendations.forEach(rec => {
+                    if (rec.type === 'info') {
+                        html += `<li>${rec.text}</li>`;
+                    } else {
+                        // Assume it's a visualization recommendation
+                        html += `
+                            <li class="flex items-center justify-between">
+                                <span>${rec.text}</span>
+                                <button class="create-viz-btn bg-blue-500 my-2 text-white px-2 py-1 text-sm rounded-lg hover:bg-blue-600 transition-colors" 
+                                        data-viz-type="${rec.type}" 
+                                        data-viz-params='${JSON.stringify(rec.params)}'>
+                                    Buat
+                                </button>
+                            </li>
+                        `;
+                    }
+                });
+
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
+
+            infoDiv.innerHTML = html;
+            messagesDiv.appendChild(infoDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // Add event listeners to the new buttons
+            infoDiv.querySelectorAll('.create-viz-btn').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const vizType = button.dataset.vizType;
+                    const vizParams = JSON.parse(button.dataset.vizParams);
+
+                    // Disable buttons and show loading
+                    button.disabled = true;
+                    button.classList.add('opacity-50', 'cursor-not-allowed');
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+
+                    // Optionally disable other viz buttons
+                    document.querySelectorAll('.create-viz-btn').forEach(btn => {
+                        if (btn !== button) {
+                            btn.disabled = true;
+                            btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        }
+                    });
+
+                    try {
+                        await createVisualization(vizType, vizParams);
+                    } finally {
+                        // Re-enable all viz buttons after process is done
+                        document.querySelectorAll('.create-viz-btn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                            if (btn === button) {
+                                btn.innerHTML = 'Buat';
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        function addVisualization(imageData) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const vizDiv = document.createElement('div');
+            vizDiv.className = 'visualization-container message-container';
+
+            // Create visualization wrapper
+            const vizWrapper = document.createElement('div');
+            vizWrapper.className = 'visualization-wrapper';
+
+            // Add image
+            const img = document.createElement('img');
+            img.src = `data:image/png;base64,${imageData}`;
+            vizWrapper.appendChild(img);
+
+            // Add visualization info
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'visualization-info mt-4 p-4 bg-gray-50 rounded-lg';
+
+            // Get current timestamp for the visualization
+            const timestamp = new Date().toLocaleString();
+
+            // Create info content
+            infoDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2">Informasi Visualisasi</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fas fa-clock mr-2"></i>Dibuat: ${timestamp}</li>
+                            <li><i class="fas fa-image mr-2"></i>Format: PNG</li>
+                            <li><i class="fas fa-expand mr-2"></i>Ukuran: ${img.naturalWidth} × ${img.naturalHeight}px</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2">Analisis Data</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fas fa-chart-line mr-2"></i>Tipe: ${getVisualizationType()}</li>
+                            <li><i class="fas fa-info-circle mr-2"></i>Deskripsi: ${getVisualizationDescription()}</li>
+                            <li><i class="fas fa-lightbulb mr-2"></i>Insight: ${getVisualizationInsight()}</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            vizWrapper.appendChild(infoDiv);
+            vizDiv.appendChild(vizWrapper);
+
+            // Add action buttons
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'message-action-btn';
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
+            downloadBtn.onclick = () => downloadImage(imageData);
+            actionsDiv.appendChild(downloadBtn);
+
+            const copyInfoBtn = document.createElement('button');
+            copyInfoBtn.className = 'message-action-btn';
+            copyInfoBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Info';
+            copyInfoBtn.onclick = () => copyToClipboard(getVisualizationInfo());
+            actionsDiv.appendChild(copyInfoBtn);
+
+            vizDiv.appendChild(actionsDiv);
+            messagesDiv.appendChild(vizDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Helper functions for visualization info
+        function getVisualizationType() {
+            // This should be updated based on the actual visualization type
+            const types = {
+                'bar': 'Bar Chart',
+                'line': 'Line Chart',
+                'scatter': 'Scatter Plot',
+                'pie': 'Pie Chart',
+                'histogram': 'Histogram',
+                'box': 'Box Plot',
+                'heatmap': 'Heatmap'
+            };
+            return types[currentVizType] || 'Custom Visualization';
+        }
+
+        function getVisualizationDescription() {
+            // This should be updated based on the actual visualization
+            const descriptions = {
+                'bar': 'Menampilkan perbandingan nilai antar kategori menggunakan batang vertikal atau horizontal',
+                'line': 'Menampilkan tren dan perubahan data seiring waktu',
+                'scatter': 'Menampilkan hubungan antara dua variabel numerik',
+                'pie': 'Menampilkan proporsi data dalam bentuk lingkaran yang dibagi menjadi beberapa bagian',
+                'histogram': 'Menampilkan distribusi frekuensi data numerik',
+                'box': 'Menampilkan distribusi data dan outlier menggunakan kuartil',
+                'heatmap': 'Menampilkan intensitas nilai menggunakan gradien warna'
+            };
+            return descriptions[currentVizType] || 'Visualisasi data untuk analisis dan pemahaman pola';
+        }
+
+        function getVisualizationInsight() {
+            // This should be updated based on the actual visualization
+            const insights = {
+                'bar': 'Membantu mengidentifikasi kategori dengan nilai tertinggi/terendah',
+                'line': 'Membantu melihat tren dan pola perubahan data',
+                'scatter': 'Membantu menemukan korelasi dan outlier dalam data',
+                'pie': 'Membantu memahami proporsi relatif dari setiap kategori',
+                'histogram': 'Membantu memahami distribusi dan bentuk data',
+                'box': 'Membantu mengidentifikasi outlier dan spread data',
+                'heatmap': 'Membantu melihat pola dan cluster dalam data multidimensi'
+            };
+            return insights[currentVizType] || 'Visualisasi ini membantu dalam memahami dan menganalisis data';
+        }
+
+        function getVisualizationInfo() {
+            return `Informasi Visualisasi:
+Tipe: ${getVisualizationType()}
+Dibuat: ${new Date().toLocaleString()}
+Deskripsi: ${getVisualizationDescription()}
+Insight: ${getVisualizationInsight()}`;
+        }
+
+        // Add this variable to track current visualization type
+        let currentVizType = '';
+
+        // Update createVisualization function to set currentVizType
+        async function createVisualization(type, params) {
+            currentVizType = type; // Set the current visualization type
+            try {
+                const response = await fetch('/visualize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        params: params
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addVisualization(data.visualization);
+                }
+            } catch (error) {
+                console.error('Error creating visualization:', error);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showCopySuccess();
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        function showCopySuccess() {
+            const notification = document.createElement('div');
+            notification.className = 'copy-success';
+            notification.textContent = 'Teks berhasil disalin!';
+            document.body.appendChild(notification);
+
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.remove();
+            }, 2000);
+        }
+
+        function downloadImage(base64Data) {
+            const link = document.createElement('a');
+            link.href = `data:image/png;base64,${base64Data}`;
+            link.download = `visualization_${new Date().getTime()}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Chat form handling
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            const model = document.querySelector('input[name="model-select"]:checked').value;
+
+            if (!message && !currentFile) return;
+
+            // Add user message to chat
+            addMessage('user', message);
+            if (currentFile) {
+                addMessage('file', `Attached file: ${currentFile.name}`);
+            }
+            input.value = '';
+
+            // Show loading animation
+            addLoadingMessage();
+
+            try {
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('model', model);
+                if (currentFile) {
+                    formData.append('file', currentFile);
+                }
+
+                // Create message container for streaming response
+                const messagesDiv = document.getElementById('chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'bg-gray-100 p-3 rounded-lg max-w-[80%] message-container';
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'response-content typing-animation';
+                messageDiv.appendChild(contentDiv);
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                // Handle streaming response
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.chunk) {
+                                    contentDiv.textContent += data.chunk;
+                                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                                } else if (data.error) {
+                                    // Error received from backend
+                                    throw new Error(data.error);
+                                }
+                            } catch (e) {
+                                console.error('Error parsing chunk:', e);
+                            }
+                        }
+                    }
+                }
+
+                console.log("Streaming complete, processing final steps");
+
+                // Remove typing animation
+                console.log("Removing typing animation");
+                contentDiv.classList.remove('typing-animation');
+
+                // Add model info
+                console.log("Adding model info");
+                // Perhatikan: MODELS adalah objek dari backend, perlu diakses global di frontend atau pass via template
+                // Saat ini, MODELS hanya ada di backend (app.py). Ini bisa jadi sumber error.
+                // Kita akan coba akses MODELS secara global atau asumsikan ada error di sini.
+                // Untuk sementara, kita log saja sebelum baris ini.
+
+                // Diasumsikan MODELS di-pass ke frontend atau ada di scope global. Jika tidak, ini akan error.
+                // const modelInfo = MODELS[model]; // Ini akan menyebabkan ReferenceError jika MODELS tidak ada
+                // addMessage('info', `Model used: ${modelInfo.name}`);
+                // Mengganti dengan logging saja untuk debugging:
+                console.log(`Model key used: ${model}`); // Log model key instead of name for now
+
+            } catch (error) {
+                console.error('Error in final steps:', error);
+                removeLoadingMessage();
+            }
+
+            // Clear file after sending
+            removeFile();
+        });
+
+        function addMessage(role, content) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-container';
+
+            let bgColor = 'bg-gray-100';
+            let textColor = 'text-gray-800';
+
+            switch (role) {
+                case 'user':
+                    bgColor = 'bg-blue-100';
+                    messageDiv.className += ` ${bgColor} ${textColor} p-3 rounded-lg ml-auto max-w-[80%]`;
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-100';
+                    textColor = 'text-red-800';
+                    messageDiv.className += ` ${bgColor} ${textColor} p-3 rounded-lg max-w-[80%]`;
+                    content = 'Terjadi kesalahan saat memproses permintaan Anda.';
+                    break;
+                case 'info':
+                    bgColor = 'bg-green-100';
+                    textColor = 'text-green-800';
+                    messageDiv.className += ` ${bgColor} ${textColor} p-3 rounded-lg text-sm max-w-[80%]`;
+                    content = `Model digunakan: ${content}`;
+                    break;
+                case 'file':
+                    bgColor = 'bg-purple-100';
+                    textColor = 'text-purple-800';
+                    messageDiv.className += ` ${bgColor} ${textColor} p-3 rounded-lg text-sm max-w-[80%]`;
+                    content = `File terlampir: ${content}`;
+                    break;
+                default:
+                    messageDiv.className += ` ${bgColor} ${textColor} p-3 rounded-lg max-w-[80%]`;
+            }
+
+            // Create content div with proper formatting
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'response-content';
+            contentDiv.textContent = content;
+
+            // Add action buttons for non-user messages
+            if (role !== 'user') {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'message-action-btn';
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                copyBtn.onclick = () => copyToClipboard(content);
+                actionsDiv.appendChild(copyBtn);
+
+                messageDiv.appendChild(actionsDiv);
+            }
+
+            messageDiv.appendChild(contentDiv);
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Initialize selected model
+        const defaultModel = document.querySelector('input[name="model-select"]:checked');
+        if (defaultModel) {
+            const defaultCard = document.querySelector(`.model-card[data-model-key="${defaultModel.value}"]`);
+            if (defaultCard) {
+                defaultCard.classList.add('selected');
+                const modelName = defaultCard.querySelector('.font-medium').textContent;
+                modelSelector.querySelector('span').textContent = modelName;
+            }
+        }
+
+        // API Testing Functions
+        function analyzeApiDoc() {
+            const url = document.getElementById('api-doc-url').value.trim();
+            if (!url) {
+                addMessage('error', 'Please enter a documentation URL');
+                return;
+            }
+
+            addLoadingMessage();
+
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    removeLoadingMessage();
+                    if (data.success) {
+                        const info = data.info;
+                        let message = `API Documentation Analysis:\n\n`;
+                        message += `Title: ${info.title}\n`;
+                        message += `Version: ${info.version}\n`;
+                        message += `Description: ${info.description}\n\n`;
+                        message += `Endpoints:\n`;
+                        info.endpoints.forEach(endpoint => {
+                            message += `\n${endpoint.method} ${endpoint.path}\n`;
+                            message += `Summary: ${endpoint.summary}\n`;
+                            if (endpoint.description) {
+                                message += `Description: ${endpoint.description}\n`;
+                            }
+                        });
+                        addMessage('info', message);
+                    } else {
+                        addMessage('error', data.error);
+                    }
+                })
+                .catch(error => {
+                    removeLoadingMessage();
+                    addMessage('error', 'Error analyzing API documentation');
+                    console.error('Error:', error);
+                });
+        }
+
+        function testApiEndpoint() {
+            const method = document.getElementById('api-method').value;
+            const url = document.getElementById('api-url').value.trim();
+            const headersText = document.getElementById('api-headers').value.trim();
+            const bodyText = document.getElementById('api-body').value.trim();
+
+            if (!url) {
+                addMessage('error', 'Please enter an API endpoint URL');
+                return;
+            }
+
+            let headers = {};
+            let body = null;
+
+            try {
+                if (headersText) {
+                    headers = JSON.parse(headersText);
+                }
+                if (bodyText) {
+                    body = JSON.parse(bodyText);
+                }
+            } catch (e) {
+                addMessage('error', 'Invalid JSON in headers or body');
+                return;
+            }
+
+            addLoadingMessage();
+
+            fetch('/api/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    url,
+                    method,
+                    headers,
+                    data: body
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    removeLoadingMessage();
+                    if (data.success) {
+                        let message = `API Test Results:\n\n`;
+                        message += `Status Code: ${data.status_code}\n`;
+                        message += `Response Time: ${data.performance.response_time.toFixed(2)}s\n\n`;
+                        message += `Response Headers:\n${JSON.stringify(data.headers, null, 2)}\n\n`;
+                        message += `Response Data:\n${JSON.stringify(data.data, null, 2)}\n\n`;
+
+                        if (data.suggestions && data.suggestions.length > 0) {
+                            message += `Suggestions:\n${data.suggestions.join('\n')}`;
+                        }
+
+                        addMessage('info', message);
+                    } else {
+                        addMessage('error', data.error);
+                    }
+                })
+                .catch(error => {
+                    removeLoadingMessage();
+                    addMessage('error', 'Error testing API endpoint');
+                    console.error('Error:', error);
+                });
+        }
+
+        // Add API selector toggle
+        document.getElementById('api-selector').addEventListener('click', () => {
+            const dropdown = document.getElementById('api-dropdown');
+            const icon = document.getElementById('api-selector').querySelector('i');
+            dropdown.classList.toggle('show');
+            icon.classList.toggle('rotate-180');
+        });
+
+        // Add Guide Panel Toggle
+        document.getElementById('guide-toggle').addEventListener('click', () => {
+            const guideContent = document.getElementById('guide-content');
+            const icon = document.getElementById('guide-toggle').querySelector('i.fa-chevron-down');
+            guideContent.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        });
+    </script>
+</body>
+
+</html>
